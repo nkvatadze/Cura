@@ -2,16 +2,13 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\BuildingResource\Pages;
+use App\Filament\Resources\BlockResource\Pages;
 use App\Models\Block;
 use App\Models\Complex;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TagsInput;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
@@ -26,8 +23,9 @@ use Filament\Tables\Actions\RestoreAction;
 use Filament\Tables\Actions\RestoreBulkAction;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\Filter;
-use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -48,7 +46,7 @@ class BlockResource extends Resource
     {
         return $form
             ->schema([
-                Section::make('Basic Information')
+                Section::make('Block Information')
                     ->schema([
                         Grid::make(2)
                             ->schema([
@@ -59,183 +57,41 @@ class BlockResource extends Resource
                                     ->required()
                                     ->placeholder('Select a complex'),
 
-                                TextInput::make('building_code')
-                                    ->required()
-                                    ->unique(ignoreRecord: true)
-                                    ->placeholder('BLD-1001')
-                                    ->helperText('Unique building identifier'),
-                            ]),
-
-                        Grid::make(2)
-                            ->schema([
                                 TextInput::make('name')
                                     ->required()
                                     ->maxLength(255)
-                                    ->placeholder('Building name'),
-
-                                TextInput::make('floors')
-                                    ->required()
-                                    ->numeric()
-                                    ->minValue(1)
-                                    ->placeholder('Number of floors'),
+                                    ->placeholder('Block name'),
                             ]),
-
-                        Textarea::make('description')
-                            ->rows(3)
-                            ->placeholder('Describe the building...'),
-                    ])
-                    ->collapsible(),
-
-                Section::make('Units & Pricing')
-                    ->schema([
-                        Grid::make(3)
+                        Grid::make(2)
                             ->schema([
-                                TextInput::make('total_units')
-                                    ->required()
-                                    ->numeric()
-                                    ->minValue(1)
-                                    ->placeholder('Total units'),
-
-                                TextInput::make('available_units')
+                                TextInput::make('flat_quantity')
                                     ->required()
                                     ->numeric()
                                     ->minValue(0)
-                                    ->placeholder('Available units'),
-
-                                TextInput::make('price_per_unit')
+                                    ->placeholder('Number of flats'),
+                                TextInput::make('commercial_space_quantity')
                                     ->required()
                                     ->numeric()
-                                    ->prefix('$')
                                     ->minValue(0)
-                                    ->step(0.01)
-                                    ->placeholder('Price per unit'),
+                                    ->placeholder('Number of commercial spaces'),
                             ]),
-                    ])
-                    ->collapsible(),
-
-                Section::make('Classification & Status')
-                    ->schema([
                         Grid::make(2)
                             ->schema([
-                                Select::make('type')
-                                    ->required()
-                                    ->options([
-                                        'residential' => 'Residential',
-                                        'commercial' => 'Commercial',
-                                        'mixed_use' => 'Mixed Use',
-                                        'luxury' => 'Luxury',
-                                        'affordable' => 'Affordable',
-                                    ])
-                                    ->default('residential'),
-
-                                Select::make('status')
-                                    ->required()
-                                    ->options([
-                                        'active' => 'Active',
-                                        'inactive' => 'Inactive',
-                                        'maintenance' => 'Maintenance',
-                                        'construction' => 'Under Construction',
-                                        'sold_out' => 'Sold Out',
-                                    ])
-                                    ->default('active'),
+                                Toggle::make('status')
+                                    ->label('Active')
+                                    ->helperText('When inactive, block is not visible to end users')
+                                    ->default(false),
                             ]),
-                    ])
-                    ->collapsible(),
-
-                Section::make('Construction Details')
-                    ->schema([
                         Grid::make(2)
                             ->schema([
-                                TextInput::make('construction_year')
+                                DatePicker::make('construction_date')
                                     ->required()
-                                    ->numeric()
-                                    ->minValue(1900)
-                                    ->maxValue(now()->year + 5)
-                                    ->placeholder('Construction year'),
-
+                                    ->placeholder('Construction start date'),
                                 DatePicker::make('completion_date')
                                     ->placeholder('Completion date'),
                             ]),
-
-                        Grid::make(2)
-                            ->schema([
-                                TextInput::make('architect')
-                                    ->placeholder('Architect firm'),
-
-                                TextInput::make('contractor')
-                                    ->placeholder('Contractor company'),
-                            ]),
-
-                        Grid::make(2)
-                            ->schema([
-                                TextInput::make('square_footage')
-                                    ->numeric()
-                                    ->suffix('sq ft')
-                                    ->placeholder('Total square footage'),
-
-                                TextInput::make('parking_spaces')
-                                    ->placeholder('Number of parking spaces'),
-                            ]),
                     ])
-                    ->collapsible(),
-
-                Section::make('Features & Amenities')
-                    ->schema([
-                        Grid::make(2)
-                            ->schema([
-                                Toggle::make('has_elevator')
-                                    ->label('Has Elevator')
-                                    ->default(false),
-
-                                Toggle::make('has_security')
-                                    ->label('Has Security System')
-                                    ->default(false),
-                            ]),
-
-                        TagsInput::make('amenities')
-                            ->placeholder('Add amenities...')
-                            ->suggestions([
-                                'Elevator',
-                                'Security System',
-                                'Parking',
-                                'Gym',
-                                'Pool',
-                                'Garden',
-                                'BBQ Area',
-                                'Storage',
-                                'Laundry',
-                                'WiFi',
-                                'Air Conditioning',
-                                'Balcony',
-                                'Pet Friendly',
-                                'Bike Storage',
-                                'Concierge',
-                            ]),
-
-                        TextInput::make('energy_rating')
-                            ->placeholder('Energy rating (A-E)')
-                            ->maxLength(1),
-                    ])
-                    ->collapsible(),
-
-                Section::make('Media')
-                    ->schema([
-                        FileUpload::make('images')
-                            ->multiple()
-                            ->image()
-                            ->imageEditor()
-                            ->maxFiles(5)
-                            ->directory('buildings')
-                            ->placeholder('Upload building images'),
-                    ])
-                    ->collapsible(),
-
-                Section::make('Additional Information')
-                    ->schema([
-                        Textarea::make('notes')
-                            ->rows(3)
-                            ->placeholder('Additional notes...'),
-                    ])
+                    ->columns(1)
                     ->collapsible(),
             ]);
     }
@@ -246,117 +102,57 @@ class BlockResource extends Resource
             ->columns([
                 TextColumn::make('complex.name')
                     ->label('Complex')
-                    ->searchable()
                     ->sortable()
-                    ->weight('bold'),
-
+                    ->searchable(),
                 TextColumn::make('name')
-                    ->searchable()
-                    ->sortable(),
-
-                TextColumn::make('building_code')
-                    ->searchable()
                     ->sortable()
-                    ->copyable()
-                    ->copyMessage('Building code copied!'),
-
-                TextColumn::make('floors')
+                    ->searchable()
+                    ->weight('bold'),
+                TextColumn::make('flat_quantity')
                     ->numeric()
                     ->sortable()
                     ->alignCenter(),
-
-                TextColumn::make('total_units')
+                TextColumn::make('commercial_space_quantity')
                     ->numeric()
                     ->sortable()
                     ->alignCenter(),
-
-                TextColumn::make('available_units')
-                    ->numeric()
+                ToggleColumn::make('status')
+                    ->label('Active')
+                    ->onColor('success')
+                    ->offColor('danger'),
+                TextColumn::make('construction_date')
+                    ->date()
+                    ->sortable()
+                    ->alignCenter(),
+                TextColumn::make('completion_date')
+                    ->date()
                     ->sortable()
                     ->alignCenter()
-                    ->color(fn (Block $record): string => $record->available_units === 0 ? 'danger' : 'success'),
-
-                TextColumn::make('price_per_unit')
-                    ->money('USD')
-                    ->sortable()
-                    ->alignEnd(),
-
-                TextColumn::make('type')
-                    ->badge()
-                    ->colors([
-                        'blue' => 'residential',
-                        'green' => 'commercial',
-                        'purple' => 'mixed_use',
-                        'amber' => 'luxury',
-                        'emerald' => 'affordable',
-                    ]),
-
-                TextColumn::make('status')
-                    ->badge()
-                    ->colors([
-                        'success' => 'active',
-                        'danger' => 'inactive',
-                        'warning' => 'maintenance',
-                        'info' => 'construction',
-                        'gray' => 'sold_out',
-                    ]),
-
-                TextColumn::make('occupancy_rate')
-                    ->label('Occupancy')
-                    ->formatStateUsing(fn (Block $record): string => $record->occupancy_rate.'%')
-                    ->alignCenter()
-                    ->color(fn (Block $record): string => $record->occupancy_rate >= 90 ? 'success' : 'warning'),
-
-                TextColumn::make('age')
-                    ->label('Age')
-                    ->formatStateUsing(fn (Block $record): string => $record->age.' years')
-                    ->alignCenter(),
-
+                    ->placeholder('Not completed'),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-
                 TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('complex')
-                    ->relationship('complex', 'name')
-                    ->searchable()
-                    ->preload(),
-
-                SelectFilter::make('type')
-                    ->options([
-                        'residential' => 'Residential',
-                        'commercial' => 'Commercial',
-                        'mixed_use' => 'Mixed Use',
-                        'luxury' => 'Luxury',
-                        'affordable' => 'Affordable',
-                    ]),
-
-                SelectFilter::make('status')
-                    ->options([
-                        'active' => 'Active',
-                        'inactive' => 'Inactive',
-                        'maintenance' => 'Maintenance',
-                        'construction' => 'Under Construction',
-                        'sold_out' => 'Sold Out',
-                    ]),
-
-                Filter::make('with_available_units')
-                    ->label('With Available Units')
-                    ->query(fn (Builder $query): Builder => $query->where('available_units', '>', 0)),
-
+                TernaryFilter::make('status')
+                    ->label('Active Only'),
+                Filter::make('completed')
+                    ->label('Completed Blocks')
+                    ->query(fn (Builder $query): Builder => $query->whereNotNull('completion_date')),
                 Filter::make('under_construction')
                     ->label('Under Construction')
-                    ->query(fn (Builder $query): Builder => $query->where('status', 'construction')),
-
-                Filter::make('high_occupancy')
-                    ->label('High Occupancy (90%+)')
-                    ->query(fn (Builder $query): Builder => $query->whereRaw('((total_units - available_units) / total_units * 100) >= 90')),
+                    ->query(fn (Builder $query): Builder => $query->whereNull('completion_date')),
+                Filter::make('residential_blocks')
+                    ->label('Residential Blocks (More Flats)')
+                    ->query(fn (Builder $query): Builder => $query->where('flat_quantity', '>', 'commercial_space_quantity')),
+                Filter::make('commercial_blocks')
+                    ->label('Commercial Blocks (More Commercial Spaces)')
+                    ->query(fn (Builder $query): Builder => $query->where('commercial_space_quantity', '>', 'flat_quantity')),
             ])
             ->actions([
                 ViewAction::make(),
@@ -377,18 +173,16 @@ class BlockResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListBuildings::route('/'),
-            'create' => Pages\CreateBuilding::route('/create'),
-            'edit' => Pages\EditBuilding::route('/{record}/edit'),
-            'view' => Pages\ViewBuilding::route('/{record}'),
+            'index' => Pages\ListBlocks::route('/'),
+            'create' => Pages\CreateBlock::route('/create'),
+            'edit' => Pages\EditBlock::route('/{record}/edit'),
+            'view' => Pages\ViewBlock::route('/{record}'),
         ];
     }
 
@@ -407,6 +201,6 @@ class BlockResource extends Resource
 
     public static function getNavigationBadgeColor(): ?string
     {
-        return static::getModel()::count() > 20 ? 'warning' : 'primary';
+        return static::getModel()::count() > 10 ? 'warning' : 'primary';
     }
 }
