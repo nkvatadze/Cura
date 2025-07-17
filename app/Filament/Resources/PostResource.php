@@ -135,7 +135,6 @@ class PostResource extends Resource
             'create' => Pages\CreatePost::route('/create'),
             'view' => Pages\ViewPost::route('/{record}'),
             'edit' => Pages\EditPost::route('/{record}/edit'),
-            'news-feed' => Pages\NewsFeed::route('/news-feed'),
         ];
     }
 }
